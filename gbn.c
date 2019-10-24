@@ -81,7 +81,8 @@ int packet_sent =0;
 int packet_correct=0;
 int packet_resent =0;
 int packet_timeout=0;
-
+/* Extra Global Variable Defined */
+int lastACKnum;
 
 /********* SECTION II: FUNCTIONS TO BE COMPLETED BY STUDENTS*********/
 /* layer 5: application layer which calls functions of layer 4 to send messages; */
@@ -121,38 +122,144 @@ void A_output(message)
   struct msg message;
 {
     if(nextseqnum>=base && nextseqnum<base+WINDOWSIZE){
-        struct pkt new_pkt;
-        new_pkt.seqnum=nextseqnum;
-        new_pkt.acknum=NOTUSED;
-        for(int i=0;i<20;i++){
+         struct pkt new_pkt;
+         new_pkt.seqnum=nextseqnum;
+         new_pkt.acknum=NOTUSED;
+         for(int i=0;i<20;i++){
            new_pkt.payload[i]=message.data[i];
-        }
-        ComputeChecksum(&new_pkt);
-        
-
+         }
+         ComputeChecksum(&new_pkt);
+         tolayer3(A,new_pkt);
+         printf("[%.1f] A: send packet [%d] base [%d]\n", currenttime(), new_pkt.seqnum, base);
+         packet_sent++;
+         if(nextseqnum==base)
+            starttimer(A,RTT);
+         nextseqnum++;
+         winbuf[winrear]=new_pkt;
+         winrear++;
+         pktnum++;
+    }
+    else{
+         if(msgnum<MAXBUFSIZE){
+            buffer[bufrear]=message;
+            printf("[%.1f] A: buffer packet [%d] base [%d]\n", currenttime(), nextseqnum + msgnum, base);
+            msgnum++;
+            bufrear++;
+         }
+         else
+         {
+            packet_lost++;
+            printf("The message buffer is already full! Package dropped!");
+            exit(-1);
+         }
+         
     }
 }
 
 /* called from layer 3, when a packet arrives for layer 4 */
 void A_input(packet)
-  struct pkt packet;
+   struct pkt packet;
 {
- };
+   int shift=packet.acknum-base;
+   if(!CheckCorrupted(packet)){
+      packet_correct++;
+      printf("[%.1f] A: ACK [%d] received\n", currenttime(), packet.acknum);
+      for(int i=shift+1;i<WINDOWSIZE;i++){
+         winbuf[i-shift-1]=winbuf[i];
+      }
+      winrear -= (shift+1);
+      pktnum-=(shift+1);
+      stoptimer(A);
+      base=packet.acknum+1;
+      if(pktnum)
+         starttimer(A,RTT);
+      if(msgnum){
+         if(nextseqnum>=base && nextseqnum<base+WINDOWSIZE){
+            struct pkt new_pkt;
+            new_pkt.seqnum=nextseqnum;
+            new_pkt.acknum=NOTUSED;
+            for(int i=0;i<20;i++){
+               new_pkt.payload[i]=buffer[buffront].data[i];
+            }
+            ComputeChecksum(&new_pkt);
+            tolayer3(A,new_pkt);
+            packet_sent++;
+            printf("[%.1f] A: send packet [%d] base [%d]\n", currenttime(), new_pkt.seqnum, base);
+            nextseqnum++;
+            winbuf[winrear]=new_pkt;
+            winrear++;
+            pktnum++;
+            buffront++;
+            msgnum--;
+         }
+      }
+   }
+   else{
+      packet_corrupt++;
+      printf("[%.1f] A: ACK corrupted\n", currenttime());
+   }
+}
 
 /* called when A's timer goes off */
 void A_timerinterrupt()
 {
- 
+   packet_timeout++;
+   printf("[%.1f] A: time out, resend packets[",currenttime());
+   starttimer(A,RTT);
+   for(int i=winfront;i<winrear;i++){
+      printf("%d ", winbuf[i].seqnum);
+      tolayer3(A, winbuf[i]);
+      packet_resent++;
+   }
+   printf("]\n");
 }  
-
-
-
-
 /* called from layer 3, when a packet arrives for layer 4 at B*/
 void B_input(packet)
   struct pkt packet;
 {
- 
+   struct pkt send; /* packet for ACK msg*/
+   if(!CheckCorrupted(packet)&&packet.seqnum==expectedseqnum){
+      printf("[%.1f] B: packet [%d] received, send ACK [%d]\n", currenttime(), packet.seqnum, packet.seqnum);
+      tolayer5(B,packet.payload);
+      packet_correct++;
+      send.acknum=packet.seqnum;
+      send.seqnum=NOTUSED;
+      for(int i=0;i<20;i++){
+         send.payload[i]=packet.payload[i];
+      }
+      ComputeChecksum(&send);
+      tolayer3(B,send);
+      packet_sent++;
+      expectedseqnum++;
+      lastACKnum=packet.seqnum;
+   }
+   else{
+      if(CheckCorrupted(packet)){
+         packet_corrupt++;
+         printf("[%.1f] B: packet corrupted, send ACK [%d]\n", currenttime(), lastACKnum-1);
+         struct pkt corrupt_Resend;
+         corrupt_Resend.seqnum=NOTUSED;
+         corrupt_Resend.acknum=lastACKnum-1;
+         for(int i=0;i<20;i++)
+            corrupt_Resend.payload[i]=packet.payload[i];
+         ComputeChecksum(&corrupt_Resend);
+         tolayer3(B,corrupt_Resend);
+         packet_resent++;
+      }
+      if(packet.seqnum!=expectedseqnum){
+         printf("[%.1f] B: packet [%d] unexpected, send ACK [%d]\n", currenttime(), packet.seqnum, lastACKnum-1);
+         packet_lost++;
+         struct pkt unexpected_resend;
+         unexpected_resend.seqnum=NOTUSED;
+         unexpected_resend.acknum=lastACKnum-1;
+         for(int i=0;i<20;i++){
+            unexpected_resend.payload[i]=packet.payload[i];
+         }
+         ComputeChecksum(&unexpected_resend);
+         tolayer3(B,unexpected_resend);
+         packet_resent++;
+      }
+   }
 }
 
 /* the following routine will be called once (only) before any other */
@@ -174,7 +281,8 @@ void A_init()
 /* entity B routines are called. You can use it to do any initialization */
 void B_init()
 {
-  expectedseqnum = 0;
+   expectedseqnum = 0;
+   lastACKnum=0;
 };
 
 
