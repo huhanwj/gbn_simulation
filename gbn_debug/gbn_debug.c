@@ -81,8 +81,6 @@ int packet_sent = 0;
 int packet_correct = 0;
 int packet_resent = 0;
 int packet_timeout = 0;
-/* Extra Global Variable Defined */
-int lastACKnum;
 
 /********* SECTION II: FUNCTIONS TO BE COMPLETED BY STUDENTS*********/
 /* layer 5: application layer which calls functions of layer 4 to send messages; */
@@ -172,10 +170,8 @@ struct pkt packet;
 		}
 		winrear -= (shift);
 		pktnum -= (shift);
-		stoptimer(A);
 		base = packet.acknum + 1;
-		if (pktnum)
-			starttimer(A, RTT);
+		stoptimer(A);
 		if (msgnum) {
 			if (nextseqnum >= base && nextseqnum < base + WINDOWSIZE) {
 				struct pkt new_pkt;
@@ -196,6 +192,8 @@ struct pkt packet;
 				msgnum--;
 			}
 		}
+		if (pktnum)
+			starttimer(A, RTT);
 	}
 	else {
 		packet_corrupt++;
@@ -223,9 +221,9 @@ struct pkt packet;
 	struct pkt send; 
 	if (CheckCorrupted(packet)) {
 		packet_corrupt++;
-		printf("[%.1f] B: packet corrupted, send ACK [%d]\n", currenttime(), lastACKnum - 1);
+		printf("[%.1f] B: packet corrupted, send ACK [%d]\n", currenttime(), expectedseqnum-1);
 		send.seqnum = NOTUSED;
-		send.acknum = lastACKnum - 1;
+		send.acknum = expectedseqnum-1;
 		for (int i = 0; i < 20; i++)
 			send.payload[i] = packet.payload[i];
 		ComputeChecksum(&send);
@@ -246,13 +244,12 @@ struct pkt packet;
 			tolayer3(B, send);
 			packet_sent++;
 			expectedseqnum++;
-			lastACKnum = packet.seqnum;
 		}
 		else {
-			printf("[%.1f] B: packet [%d] unexpected, send ACK [%d]\n", currenttime(), packet.seqnum, lastACKnum - 1);
+			printf("[%.1f] B: packet [%d] unexpected, send ACK [%d]\n", currenttime(), packet.seqnum, expectedseqnum-1);
 			packet_lost++;
 			send.seqnum = NOTUSED;
-			send.acknum = lastACKnum - 1;
+			send.acknum = expectedseqnum-1;
 			for (int i = 0; i < 20; i++) {
 				send.payload[i] = packet.payload[i];
 			}
@@ -285,7 +282,6 @@ void A_init()
 void B_init()
 {
 	expectedseqnum = 0;
-	lastACKnum = 0;
 };
 
 
