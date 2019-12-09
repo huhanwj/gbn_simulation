@@ -1,0 +1,4 @@
+﻿  gbn_from_mj.c
+D:\cuhk\Yr3\term5_19fall\IERG3310\gbn_simulation\gbn_copy\gbn_from_mj.c(615,26): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\cuhk\Yr3\term5_19fall\IERG3310\gbn_simulation\gbn_copy\gbn_from_mj.c(791,36): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+  gbn_copy.vcxproj -> D:\cuhk\Yr3\term5_19fall\IERG3310\gbn_simulation\gbn_copy\Debug\gbn_copy.exe

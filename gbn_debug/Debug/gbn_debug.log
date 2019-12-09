@@ -1,4 +1,4 @@
 ﻿  gbn_debug.c
-D:\cuhk\Yr3\term5_19fall\IERG3310\gbn_simulation\gbn_debug\gbn_debug.c(496,26): warning C4244:  '=': conversion from 'double' to 'float', possible loss of data
-D:\cuhk\Yr3\term5_19fall\IERG3310\gbn_simulation\gbn_debug\gbn_debug.c(672,36): warning C4244:  '=': conversion from 'double' to 'float', possible loss of data
+D:\cuhk\Yr3\term5_19fall\IERG3310\gbn_simulation\gbn_debug\gbn_debug.c(560,26): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\cuhk\Yr3\term5_19fall\IERG3310\gbn_simulation\gbn_debug\gbn_debug.c(736,36): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
   gbn_debug.vcxproj -> D:\cuhk\Yr3\term5_19fall\IERG3310\gbn_simulation\gbn_debug\Debug\gbn_debug.exe
